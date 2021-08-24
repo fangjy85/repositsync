@@ -1,0 +1,68 @@
+@Library('jenkins-shared-libraries') _
+pipeline {
+  parameters {
+    choice(name: 'BUILD_LOCATION', choices: ['hz', 'tp'])
+    choice(name: 'INSTALL_DEBUG_TOOLS', choices: ['n', 'y'])
+    string(name: 'SONIC_BUILD_JOBS', defaultValue: '1')
+    string(name: 'DOCKER_IMAGE',defaultValue: "'docker.clounix.com/software/sonic/clounix-build-tools/pytest:2.7'")
+    string(name: 'DOCKER_LABLE',defaultValue: "'gitlab-container-registry'")
+    text(name: 'DOCKER_ARG', defaultValue: """-u root --privileged --entrypoint=''
+-v /lib/modules:/lib/modules
+-v ${WORKSPACE}/buildimage/target/debs/${SONIC_BLDENV}:/debs
+-v ${WORKSPACE}/buildimage/target/docker-sonic-vs.gz:/images/docker-sonic-vs.gz
+""")
+  }
+
+  environment {
+    IS_MR = "${env.JOB_NAME =~ /merge-requests/ ? 'y' : 'n'}"
+
+    DEFAULT_BRANCH = "${env.JOB_NAME.split('/')[-2]}"
+    SONIC_PLATFORM = "${env.JOB_NAME.split('/')[-3]}"
+
+    SCM_BRANCH = "${env.IS_MR == 'y' ? env.gitlabBranch : env.DEFAULT_BRANCH}"
+    TARGET_BRANCH = "${env.IS_MR == 'y' ? env.gitlabTargetBranch : env.DEFAULT_BRANCH}"
+    SONIC_BLDENV = "${env.TARGET_BRANCH =~ /201911/ ? 'stretch' : 'buster'}"
+  }
+
+  agent { node { label "jenkins-${env.BUILD_LOCATION}-kvm-workers" } }
+
+  options {
+    gitLabConnection(gitLabConnection: 'gitlab')
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+  }
+
+  triggers {
+    pollSCM("${env.IS_MR == 'y' ? '' : '@midnight'}")
+    gitlab(
+      branchFilterType: 'All',
+      triggerOnPush: false,
+      triggerOnMergeRequest: true,
+      skipWorkInProgressMergeRequest: true,
+      triggerOpenMergeRequestOnPush: 'both',
+      triggerOnNoteRequest: true,
+      noteRegex: "${env.GITLAB_NOTE_REGEX}",
+      setBuildDescription: true,
+      secretToken: "${env.SECRET_TOKEN}"
+    )
+  }
+
+  stages {
+
+    stage('Test') {
+      agent {
+        docker {
+          label "${DOCKER_LABLE}"
+          reuseNode true
+          alwaysPull true
+          image "${DOCKER_IMAGE}"
+          args "${DOCKER_ARG}"
+        }
+      }
+
+      steps {
+        sh '/home/jenkins/workspace/sonic/vs/201911.clounix/debug/test.sh'
+      }
+    }
+  }
+
+}
