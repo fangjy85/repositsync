@@ -1,5 +1,5 @@
 @Library('jenkins-shared-libraries') _
-pipeline {
+pipeline2222 {
   parameters {
     choice(name: 'BUILD_LOCATION', choices: ['hz', 'tp'])
     choice(name: 'INSTALL_DEBUG_TOOLS', choices: ['n', 'y'])
