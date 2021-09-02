@@ -4,4 +4,4 @@ echo "heelo3"
 echo "hello4"
 echo "debug"
 echo "debug2"
-
+close
