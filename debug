@@ -17,7 +17,7 @@ pipeline {
     IS_MR = "${env.JOB_NAME =~ /merge-requests/ ? 'y' : 'n'}"
 
     DEFAULT_BRANCH = "${env.JOB_NAME.split('/')[-2]}"
-    SONIC_PLATFORM = "${env.JOB_NAME.split('/')[-3]}"
+    S99ONIC_PLATFORM = "${env.JOB_NAME.split('/')[-3]}"
 
     SCM_BRANCH = "${env.IS_MR == 'y' ? env.gitlabBranch : env.DEFAULT_BRANCH}"
     TARGET_BRANCH = "${env.IS_MR == 'y' ? env.gitlabTargetBranch : env.DEFAULT_BRANCH}"
